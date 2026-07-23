@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0f172a" />
+    <title>Recruitment Exam Admin</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body class="admin-page">
+    <div class="app-shell admin-shell">
+      <header class="app-header admin-header">
+        <div>
+          <p class="eyebrow">Recruitment Exam Evaluation</p>
+          <h1>Admin dashboard</h1>
+          <p class="subtitle">Candidates, section totals, pass/fail status, and examiner-wise breakdowns.</p>
+        </div>
+        <div class="admin-actions">
+          <button class="action-button primary" id="export-csv-button" type="button">CSV Export</button>
+          <a class="action-button admin-link" href="./index.html">Evaluation App</a>
+          <div class="status-pill" id="admin-status">Loading data</div>
+        </div>
+      </header>
+
+      <main class="admin-main">
+        <section class="panel">
+          <div class="card admin-card">
+            <div class="admin-table-wrap">
+              <table class="admin-table" aria-label="Candidates table">
+                <thead>
+                  <tr>
+                    <th>Roll No.</th>
+                    <th>Name</th>
+                    <th>Post</th>
+                    <th>Total</th>
+                    <th>Pass Mark</th>
+                    <th>Status</th>
+                    <th>Details</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-candidate-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div class="modal hidden" id="details-modal" aria-hidden="true">
+      <div class="modal-backdrop" data-close-modal></div>
+      <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="details-modal-title">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Detailed Marks</p>
+            <h2 id="details-modal-title">Examiner breakdown</h2>
+          </div>
+          <button class="action-button" type="button" data-close-modal>Close</button>
+        </div>
+        <div class="modal-content" id="details-modal-content"></div>
+      </div>
+    </div>
+
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm"></script>
+    <script type="module" src="./admin.js"></script>
+  </body>
+</html>

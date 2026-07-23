@@ -1,0 +1,10 @@
+section_name,difficulty,question_text
+Oral Test,easy,"আপনার নিজের পরিচয় দিন।"
+Oral Test,medium,"এই পদের জন্য আপনি কেন উপযুক্ত?"
+Oral Test,hard,"একটি কঠিন পরিস্থিতিতে আপনি কীভাবে সিদ্ধান্ত নেবেন?"
+Practical Demo,easy,"এই যন্ত্রটি কীভাবে চালু করবেন?"
+Practical Demo,medium,"যন্ত্রটির এই অংশের কাজ কী?"
+Practical Demo,hard,"এই ত্রুটি হলে আপনি কীভাবে সমাধান করবেন?"
+Counter Service,easy,"একজন গ্রাহককে কীভাবে অভ্যর্থনা করবেন?"
+Counter Service,medium,"একাধিক আবেদনকারীর কাজ একসাথে এলে কীভাবে অগ্রাধিকার দেবেন?"
+Counter Service,hard,"একটি ভুল তথ্য জমা হলে আপনি কীভাবে যাচাই করবেন?"

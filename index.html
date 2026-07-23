@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0f172a" />
+    <title>Recruitment Exam Evaluation</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="app-header">
+        <div>
+          <p class="eyebrow">Recruitment Exam Evaluation</p>
+          <h1>Candidate scoring dashboard</h1>
+          <p class="subtitle">
+            A mobile-friendly exam evaluation workspace for examiners.
+          </p>
+        </div>
+        <div class="status-pill" id="connection-status">Supabase ready</div>
+      </header>
+
+      <main id="app">
+        <section class="screen active" id="screen-login" aria-labelledby="screen-login-title">
+          <div class="panel">
+            <h2 id="screen-login-title">Examiner Login</h2>
+            <p class="screen-note">Tap your name to continue.</p>
+            <div class="card stack" id="examiner-list"></div>
+          </div>
+        </section>
+
+        <section class="screen hidden" id="screen-candidate" aria-labelledby="screen-candidate-title">
+          <div class="panel">
+            <h2 id="screen-candidate-title">Candidate Entry</h2>
+            <div class="card stack">
+              <form class="stack" id="candidate-roll-form">
+                <label class="field-group">
+                  <span>Roll No.</span>
+                  <input class="text-input" id="roll-no-input" name="roll_no" type="text" autocomplete="off" inputmode="numeric" placeholder="Enter roll number" required />
+                </label>
+                <button class="action-button primary" type="submit">Submit</button>
+              </form>
+
+              <div class="card nested-card hidden" id="candidate-match-card">
+                <div class="field-group">
+                  <label>Name</label>
+                  <div class="value-box" id="candidate-name"></div>
+                </div>
+                <div class="field-group">
+                  <label>Post Applied</label>
+                  <div class="value-box" id="candidate-post"></div>
+                </div>
+              </div>
+
+              <form class="stack hidden" id="new-candidate-form">
+                <h3 class="subheading">নতুন প্রার্থী</h3>
+                <label class="field-group">
+                  <span>Name</span>
+                  <input class="text-input" id="new-candidate-name" type="text" placeholder="Candidate name" required />
+                </label>
+                <label class="field-group">
+                  <span>Post</span>
+                  <select class="text-input" id="new-candidate-post" required>
+                    <option value="">Select post</option>
+                    <option value="supervisor">supervisor</option>
+                    <option value="counter">counter</option>
+                  </select>
+                </label>
+                <button class="action-button primary" type="submit">Create Candidate</button>
+              </form>
+            </div>
+          </div>
+        </section>
+
+        <section class="screen hidden" id="screen-sections" aria-labelledby="screen-sections-title">
+          <div class="panel">
+            <h2 id="screen-sections-title">Section Checklist</h2>
+            <div class="card stack">
+              <div class="summary-strip" id="candidate-summary"></div>
+              <div class="stack" id="section-list"></div>
+              <button class="action-button primary" id="start-button" type="button">শুরু করুন</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="screen hidden" id="screen-evaluation" aria-labelledby="screen-evaluation-title">
+          <div class="panel">
+            <h2 id="screen-evaluation-title">Section Evaluation</h2>
+            <div class="card stack evaluation-card">
+              <div class="summary-strip" id="evaluation-summary"></div>
+
+              <div class="evaluation-status" id="evaluation-status"></div>
+
+              <div class="question-card" id="question-card">
+                <div class="question-label">প্রশ্ন</div>
+                <div class="question-text" id="question-text">Waiting for the selected section to start.</div>
+              </div>
+
+              <div class="stack" id="question-controls">
+                <div class="rating-grid" id="rating-grid">
+                  <button class="rating-button rating-bad" type="button" data-rating="bad">খারাপ</button>
+                  <button class="rating-button rating-average" type="button" data-rating="average">মোটামুটি</button>
+                  <button class="rating-button rating-good" type="button" data-rating="good">ভালো</button>
+                  <button class="rating-button rating-excellent" type="button" data-rating="excellent">চমৎকার</button>
+                </div>
+
+                <label class="toggle-row" for="direct-entry-toggle">
+                  <span>
+                    <strong>ডাইরেক্ট এন্ট্রি</strong>
+                    <small>On করলে প্রশ্ন-উত্তরের UI hide হবে</small>
+                  </span>
+                  <input id="direct-entry-toggle" type="checkbox" />
+                </label>
+
+                <div class="score-editor">
+                  <label class="field-group" for="suggested-score-input">
+                    <span id="score-label">প্রাপ্ত নম্বর (সর্বোচ্চ 0)</span>
+                    <input class="text-input" id="suggested-score-input" type="number" min="0" step="1" />
+                  </label>
+                  <div class="hint-text" id="score-method-text">method: auto</div>
+                </div>
+              </div>
+
+              <div class="stack hidden" id="direct-entry-panel">
+                <label class="field-group" for="direct-score-input">
+                  <span>প্রাপ্ত নম্বর</span>
+                  <input class="text-input" id="direct-score-input" type="number" min="0" step="1" placeholder="Enter score directly" />
+                </label>
+              </div>
+
+              <button class="action-button primary" id="lock-section-button" type="button">এই সেকশন লক করুন</button>
+              <button class="action-button hidden" id="next-candidate-button" type="button">পরবর্তী প্রার্থী</button>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
