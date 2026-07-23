@@ -32,6 +32,7 @@ const scoreMethodText = document.getElementById('score-method-text');
 const directScoreInput = document.getElementById('direct-score-input');
 const lockSectionButton = document.getElementById('lock-section-button');
 const nextCandidateButton = document.getElementById('next-candidate-button');
+const logoutButton = document.getElementById('logout-button');
 
 const storageKeys = {
   examinerId: 'evaluation_examiner_id',
@@ -830,6 +831,33 @@ function handleNextCandidate() {
   showScreen(screenCandidate);
 }
 
+function handleLogout() {
+  clearStoredValue(storageKeys.examinerId);
+  clearStoredValue(storageKeys.examinerName);
+  clearStoredValue(storageKeys.candidateId);
+  clearStoredValue(storageKeys.candidateRollNo);
+  clearStoredValue(storageKeys.selectedSectionIds);
+  
+  state.examiners = [];
+  state.candidate = null;
+  state.sections = [];
+  state.selectedSectionIds = [];
+  state.activeSectionIndex = 0;
+  state.activeSection = null;
+  state.activeQuestion = null;
+  state.activeDifficulty = 'easy';
+  state.lastRating = null;
+  state.directEntry = false;
+  state.sectionResults = [];
+  
+  if (statusEl) {
+    statusEl.textContent = hasConfig ? 'Supabase configured' : 'Add Supabase credentials in config.js';
+  }
+  
+  showScreen(screenLogin);
+  loadExaminers();
+}
+
 function hydrateSession() {
   const storedExaminerId = readStoredValue(storageKeys.examinerId);
   const storedCandidateId = readStoredValue(storageKeys.candidateId);
@@ -857,6 +885,7 @@ async function bootstrap() {
     });
   });
   nextCandidateButton?.addEventListener('click', handleNextCandidate);
+  logoutButton?.addEventListener('click', handleLogout);
 
   ratingGridEl?.addEventListener('click', (event) => {
     const target = event.target;
