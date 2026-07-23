@@ -1,11 +1,13 @@
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
 
-const supabase = SUPABASE_URL !== 'YOUR_SUPABASE_URL_HERE' && SUPABASE_ANON_KEY !== 'YOUR_SUPABASE_ANON_KEY_HERE' && window.supabase
-  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+const supabase = SUPABASE_URL !== 'YOUR_SUPABASE_URL_HERE' && SUPABASE_ANON_KEY !== 'YOUR_SUPABASE_ANON_KEY_HERE'
+  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
   : null;
 
 const statusEl = document.getElementById('admin-status');
 const exportButton = document.getElementById('export-csv-button');
+const deleteAllButton = document.getElementById('delete-all-button');
 const tableBody = document.getElementById('admin-candidate-body');
 const detailsModal = document.getElementById('details-modal');
 const detailsModalContent = document.getElementById('details-modal-content');
@@ -365,6 +367,45 @@ async function loadAdminData() {
   setStatus(`Loaded ${state.candidates.length} candidates`);
 }
 
+async function deleteAllCandidates() {
+  if (!supabase) {
+    setStatus('Supabase not configured');
+    return;
+  }
+
+  if (!confirm('Are you sure you want to delete ALL candidates? This will also delete all marks, response logs, and final marks. This action cannot be undone!')) {
+    return;
+  }
+
+  if (!confirm('FINAL WARNING: This will permanently delete ALL candidates and their data. Click OK only if you are absolutely certain.')) {
+    return;
+  }
+
+  setStatus('Deleting all candidates...');
+
+  try {
+    // Delete related data first (due to foreign key constraints)
+    await supabase.from('response_log').delete().gte('id', '00000000-0000-0000-0000-000000000000');
+    await supabase.from('marks').delete().gte('id', '00000000-0000-0000-0000-000000000000');
+    await supabase.from('final_marks').delete().gte('id', '00000000-0000-0000-0000-000000000000');
+    
+    // Delete all candidates
+    const { error } = await supabase.from('candidates').delete().gte('id', '00000000-0000-0000-0000-000000000000');
+
+    if (error) {
+      throw error;
+    }
+
+    // Reload data
+    await loadAdminData();
+    setStatus('All candidates deleted successfully');
+  } catch (error) {
+    console.error(error);
+    setStatus('Failed to delete candidates');
+    alert('Failed to delete candidates. Check console for details.');
+  }
+}
+
 function registerEvents() {
   tableBody?.addEventListener('click', (event) => {
     const target = event.target;
@@ -386,6 +427,13 @@ function registerEvents() {
 
   exportButton?.addEventListener('click', () => {
     downloadCsv(buildCsv());
+  });
+
+  deleteAllButton?.addEventListener('click', () => {
+    deleteAllCandidates().catch((error) => {
+      console.error(error);
+      setStatus('Failed to delete candidates');
+    });
   });
 
   detailsModal?.addEventListener('click', (event) => {

@@ -313,12 +313,16 @@ async function fetchNextAvailableQuestion(sectionId, candidateId, difficultyOrde
 }
 
 async function loadActiveQuestion() {
+  console.log('loadActiveQuestion called');
+
   if (!supabase || !state.activeSection || !state.candidate) {
+    console.log('Missing required data for loading question');
     return;
   }
 
   const candidateId = getCandidateId();
   if (!candidateId) {
+    console.log('No candidate ID found');
     return;
   }
 
@@ -331,6 +335,8 @@ async function loadActiveQuestion() {
 
   const question = await fetchNextAvailableQuestion(state.activeSection.id, candidateId, difficultyOrder);
 
+  console.log('Fetched question:', question);
+
   if (!question) {
     state.activeQuestion = null;
     if (questionTextEl) {
@@ -341,8 +347,10 @@ async function loadActiveQuestion() {
 
   state.activeQuestion = question;
   state.activeDifficulty = question.difficulty;
+  
   if (questionTextEl) {
     questionTextEl.textContent = question.question_text;
+    console.log('Question text set to:', questionTextEl.textContent);
   }
 
   if (sectionType === 'practical' || sectionType === 'viva') {
@@ -350,6 +358,8 @@ async function loadActiveQuestion() {
   } else {
     setEvaluationStatus(`Section: ${state.activeSection.section_name}`);
   }
+
+  console.log('Current screen state - checking if evaluation screen is visible');
 }
 
 function moveToNextSectionOrFinish() {
@@ -814,8 +824,12 @@ async function handleNewCandidateSubmit(event) {
     renderCandidateSummary();
     showScreen(screenSections);
   } catch (error) {
-    console.error(error);
-    alert('Candidate create করা যায়নি. আবার চেষ্টা করুন।');
+    console.error('Full error:', error);
+    if (error.message?.includes('duplicate') || error.status === 409 || error.code === '23505') {
+      alert('এই Roll No. ইতিমধ্যেই ব্যবহৃত হয়েছে। অন্য Roll No. ব্যবহার করুন।');
+    } else {
+      alert('Candidate create করা যায়নি. আবার চেষ্টা করুন।');
+    }
   }
 }
 
