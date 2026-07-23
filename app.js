@@ -538,17 +538,40 @@ async function loadSectionsForPost(postApplied) {
     return;
   }
 
+  const normalizedPost = String(postApplied ?? '').trim().toLowerCase();
+
   const { data, error } = await supabase
     .from('sections')
     .select('id, section_name, section_type, section_order, post_type')
-    .eq('post_type', postApplied)
+    .eq('post_type', normalizedPost)
     .order('section_order', { ascending: true });
 
   if (error) {
     throw error;
   }
 
-  state.sections = data ?? [];
+  let sections = data ?? [];
+
+  // Fallback: if strict filter returns nothing, do a broader fetch and normalize in JS.
+  if (!sections.length) {
+    const fallback = await supabase
+      .from('sections')
+      .select('id, section_name, section_type, section_order, post_type')
+      .order('section_order', { ascending: true });
+
+    if (!fallback.error) {
+      sections = (fallback.data ?? []).filter(
+        (row) => String(row.post_type ?? '').trim().toLowerCase() === normalizedPost,
+      );
+    }
+  }
+
+  state.sections = sections;
+
+  if (!state.sections.length && sectionListEl) {
+    sectionListEl.innerHTML = `<div class="value-box">No sections found for post: ${normalizedPost || 'unknown'}</div>`;
+  }
+
   renderSectionChecklist();
 }
 
