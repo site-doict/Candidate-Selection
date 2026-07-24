@@ -10,20 +10,14 @@
   <body>
     <div class="app-shell">
       <header class="app-header">
-        <div>
-          <p class="eyebrow">Recruitment Exam Evaluation</p>
-          <h1>Examiner Dashboard</h1>
-        </div>
+<div class="examiner-top">
+  <span class="examiner-name" id="examiner-name"></span>
+  <span class="examiner-desig" id="examiner-desig"></span>
+  <button class="action-button small" id="logout-button" type="button">Logout</button>
+</div>
         <div class="admin-actions">
-          <button class="action-button" id="logout-button" type="button">Logout</button>
         </div>
       </header>
-      <section class="panel examiner-info hidden" id="examiner-info">
-        <div class="card admin-card">
-          <h2 class="eyebrow">Examiner</h2>
-          <p><span class="examiner-name" style="color:#0f6dfd;"></span> — <span class="examiner-desig" style="color:#ff4d4f;"></span></p>
-        </div>
-      </section>
 
       <main id="app">
         <section class="screen active" id="screen-login" aria-labelledby="screen-login-title">
@@ -98,25 +92,25 @@
               <div class="summary-strip" id="evaluation-summary"></div>
 
               <div class="section-info-bar" id="section-info-bar">
-                <span class="section-name-label" id="section-name-display"></span>
-                <span class="max-marks-badge" id="max-marks-display">পূর্ণমান: —</span>
-              </div>
+  <span class="section-name-label" id="section-name-display"></span>
+  <span class="max-marks-badge" id="max-marks-display">পূর্ণমান: —</span>
+</div>
 
               <div class="difficulty-banner hidden" id="difficulty-banner"></div>
 
               <div class="evaluation-status" id="evaluation-status"></div>
 
               <div class="question-card" id="question-card">
-                <div class="question-label">প্রশ্ন</div>
+                <div class="question-label" id="question-label"><span id="difficulty-label" class="difficulty-label"></span>প্রশ্ন</div>
                 <div class="question-text" id="question-text">Waiting for the selected section to start.</div>
               </div>
 
               <div class="stack" id="question-controls">
                 <div class="rating-grid" id="rating-grid">
-                  <button class="rating-button rating-bad" type="button" data-rating="bad">খারাপ</button>
-                  <button class="rating-button rating-average" type="button" data-rating="average">মোটামুটি</button>
-                  <button class="rating-button rating-good" type="button" data-rating="good">ভালো</button>
-                  <button class="rating-button rating-excellent" type="button" data-rating="excellent">চমৎকার</button>
+                  <button class="rating-button rating-bad" type="button" data-rating="bad" data-score="0.25"><span class="rating-text">খারাপ</span><span class="rating-value">0.25</span></button>
+                  <button class="rating-button rating-average" type="button" data-rating="average" data-score="0.5"><span class="rating-text">মোটামুটি</span><span class="rating-value">0.5</span></button>
+                  <button class="rating-button rating-good" type="button" data-rating="good" data-score="0.75"><span class="rating-text">ভালো</span><span class="rating-value">0.75</span></button>
+                  <button class="rating-button rating-excellent" type="button" data-rating="excellent" data-score="1"><span class="rating-text">চমৎকার</span><span class="rating-value">1</span></button>
                 </div>
 
                 <label class="toggle-row" for="direct-entry-toggle">
@@ -130,7 +124,7 @@
                 <div class="score-editor">
                   <label class="field-group" for="suggested-score-input">
                     <span id="score-label">প্রাপ্ত নম্বর (সর্বোচ্চ 0)</span>
-                    <input class="text-input" id="suggested-score-input" type="number" min="0" step="1" />
+                    <input class="text-input" id="suggested-score-input" type="number" min="0" step="0.01" />
                   </label>
                   <div class="hint-text" id="score-method-text">method: auto</div>
                 </div>
@@ -139,7 +133,7 @@
               <div class="stack hidden" id="direct-entry-panel">
                 <label class="field-group" for="direct-score-input">
                   <span>প্রাপ্ত নম্বর</span>
-                  <input class="text-input" id="direct-score-input" type="number" min="0" step="1" placeholder="Enter score directly" />
+                  <input class="text-input" id="direct-score-input" type="number" min="0" step="0.01" placeholder="Enter score directly" />
                 </label>
               </div>
 

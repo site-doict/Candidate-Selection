@@ -59,6 +59,7 @@ const state = {
   directEntry: false,
   sectionResults: [],
   sectionHighestScore: null,
+  sectionScoreAccum: 0,
 };
 
 const hasConfig =
@@ -119,6 +120,7 @@ function clearEvaluationState() {
   state.activeQuestion = null;
   state.activeDifficulty = 'easy';
   state.lastRating = null;
+  state.sectionScoreAccum = 0;
   state.directEntry = false;
   state.sectionResults = [];
 
@@ -158,8 +160,6 @@ function showEvaluationScreen() {
   renderCandidateSummary();
   renderSectionChecklist();
   showScreen(screenEvaluation);
-  // Hide examiner info on evaluation screen to keep UI clean
-  setDisplay(document.getElementById('examiner-info'), false);
 }
 
 function getSelectedSectionsInOrder() {
@@ -205,32 +205,34 @@ async function practicalSectionAlreadyAssigned({ candidateId, sectionId, examine
   return existing.some((row) => String(row.examiner_id) !== String(examinerId));
 }
 
-function getSuggestedScoreFromOutcome(outcome) {
+// Each rating button's fraction of that stage's max share (matches data-score in index.html)
+const RATING_FRACTIONS = { bad: 0.25, average: 0.5, good: 0.75, excellent: 1 };
+
+// Split a section's max_marks across the 3 difficulty stages. Easy and medium
+// each get an equal floor share; hard absorbs the remainder so the three
+// shares always add up exactly to max_marks (e.g. 10 -> 3, 3, 4).
+function getDifficultyShare(difficulty, maxMarks) {
+  const total = Number(maxMarks) || 0;
+  const base = Math.floor(total / 3);
+  const shares = { easy: base, medium: base, hard: total - base * 2 };
+  return shares[difficulty] ?? 0;
+}
+
+function roundScore(value) {
+  return Math.round(value * 100) / 100;
+}
+
+// Records the score for one stage (easy/medium/hard) and adds it to the
+// section's running total, then reflects that total in the score input.
+function recordStageScore(difficulty, rating) {
   const maxMarks = Number(state.activeSection?.max_marks ?? 0);
-  const difficulty = outcome.difficulty;
-  const rating = outcome.rating;
+  const share = getDifficultyShare(difficulty, maxMarks);
+  const fraction = RATING_FRACTIONS[rating] ?? 0;
+  const stageScore = roundScore(share * fraction);
 
-  let percentage = 0;
-
-  if (difficulty === 'easy' && rating === 'bad') {
-    percentage = 25;
-  } else if (difficulty === 'easy' && rating === 'average') {
-    percentage = 30;
-  } else if (difficulty === 'easy' && ['good', 'excellent'].includes(rating)) {
-    percentage = 40;
-  } else if (difficulty === 'medium' && ['bad', 'average'].includes(rating)) {
-    percentage = 40;
-  } else if (difficulty === 'medium' && ['good', 'excellent'].includes(rating)) {
-    percentage = 70;
-  } else if (difficulty === 'hard' && ['bad', 'average'].includes(rating)) {
-    percentage = 70;
-  } else if (difficulty === 'hard' && rating === 'good') {
-    percentage = 90;
-  } else if (difficulty === 'hard' && rating === 'excellent') {
-    percentage = 100;
-  }
-
-  return Math.round((maxMarks * percentage) / 100);
+  state.sectionScoreAccum = roundScore((state.sectionScoreAccum ?? 0) + stageScore);
+  updateSuggestedScoreInput(state.sectionScoreAccum);
+  return state.sectionScoreAccum;
 }
 
 function highlightSelectedRating(rating) {
@@ -265,15 +267,29 @@ function animateQuestionCard() {
 function showDifficultyBanner(difficulty) {
   if (!difficultyBanner) return;
 
-  const labels = { easy: 'সহজ ✦', medium: 'মাঝারি ✦✦', hard: 'কঠিন ✦✦✦' };
-  const classes = { easy: 'banner-easy', medium: 'banner-medium', hard: 'banner-hard' };
+  const labels = { easy: 'সহজ', medium: 'মাঝারি', hard: 'কঠিন' };
+  const classes = { easy: 'pill-easy', medium: 'pill-medium', hard: 'pill-hard' };
 
-  difficultyBanner.textContent = labels[difficulty] ?? difficulty;
-  difficultyBanner.className = 'difficulty-banner ' + (classes[difficulty] ?? '');
-  difficultyBanner.classList.remove('banner-anim');
-  void difficultyBanner.offsetWidth;
-  difficultyBanner.classList.add('banner-anim');
+  // Difficulty label shown once, directly before the word "প্রশ্ন"
+  const difficultyLabel = document.getElementById('difficulty-label');
+  if (difficultyLabel) {
+    difficultyLabel.textContent = labels[difficulty] ?? '';
+    difficultyLabel.className = 'difficulty-label ' + (classes[difficulty] ?? '');
+  }
+
+  // Tint the question card background to match the difficulty
+  if (questionCardEl) {
+    questionCardEl.classList.remove('difficulty-easy', 'difficulty-medium', 'difficulty-hard');
+    if (difficulty) {
+      questionCardEl.classList.add(`difficulty-${difficulty}`);
+    }
+  }
+
+  // Hide original banner element (superseded by the difficulty label above)
+  difficultyBanner.classList.add('hidden');
 }
+
+
 
 function updateSectionInfoBar() {
   const section = state.activeSection;
@@ -312,12 +328,6 @@ function updateSuggestedScoreInput(score) {
   }
 
   animateScoreUpdate();
-}
-
-function updateScoreForCurrentOutcome(difficulty, rating) {
-  const score = getSuggestedScoreFromOutcome({ difficulty, rating });
-  updateSuggestedScoreInput(score);
-  return score;
 }
 
 function setDirectEntryMode(enabled) {
@@ -497,11 +507,7 @@ async function loadActiveQuestion() {
     console.log('Question text set to:', questionTextEl.textContent);
   }
 
-  if (sectionType === 'practical' || sectionType === 'viva') {
-    setEvaluationStatus(`Section: ${state.activeSection.section_name} | Difficulty: ${question.difficulty}`);
-  } else {
-    setEvaluationStatus(`Section: ${state.activeSection.section_name}`);
-  }
+  setEvaluationStatus(state.activeSection.section_name);
 
   console.log('Current screen state - checking if evaluation screen is visible');
 }
@@ -533,7 +539,9 @@ function moveToNextSectionOrFinish() {
   state.activeSection = selectedSections[state.activeSectionIndex];
   state.activeDifficulty = 'easy';
   state.lastRating = null;
+  state.sectionScoreAccum = 0;
   updateSectionInfoBar();
+  updateSuggestedScoreInput(0);
   loadActiveQuestion();
 }
 
@@ -550,6 +558,7 @@ function resetCandidateAndSectionState() {
   state.activeQuestion = null;
   state.activeDifficulty = 'easy';
   state.lastRating = null;
+  state.sectionScoreAccum = 0;
   state.directEntry = false;
   state.sectionResults = [];
 
@@ -573,6 +582,18 @@ function resetCandidateAndSectionState() {
   renderSectionChecklist();
 }
 
+// Examiner name is stored as "Full Name — Designation" or just "Full Name"
+// (same encoding used by admin.js, since the examiners table has no separate
+// designation column).
+function parseExaminerName(rawName) {
+  const raw = rawName ?? '';
+  const idx = raw.indexOf(' — ');
+  if (idx !== -1) {
+    return { name: raw.slice(0, idx), designation: raw.slice(idx + 3) };
+  }
+  return { name: raw, designation: '' };
+}
+
 function renderExaminerList() {
   if (!examinerListEl) {
     return;
@@ -586,15 +607,18 @@ function renderExaminerList() {
   }
 
   state.examiners.forEach((examiner) => {
+      const { name, designation } = parseExaminerName(examiner.name);
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'examiner-button action-button';
-      button.innerHTML = `<span class="examiner-name">${examiner.name}</span><span class="examiner-desig">${examiner.designation || ''}</span>`;
+      button.innerHTML = `<span class="examiner-name">${name}</span><span class="examiner-desig">${designation || ''}</span>`;
       button.addEventListener('click', () => {
         writeStoredValue(storageKeys.examinerId, String(examiner.id));
-        writeStoredValue(storageKeys.examinerName, examiner.name);
-        statusEl.textContent = `Logged in as ${examiner.name}`;
-        renderExaminerInfo(examiner.name, examiner.designation);
+        writeStoredValue(storageKeys.examinerName, name);
+        if (statusEl) {
+          statusEl.textContent = `Logged in as ${name}`;
+        }
+        renderExaminerInfo(name, designation);
         showScreen(screenCandidate);
       });
       examinerListEl.appendChild(button);
@@ -602,12 +626,10 @@ function renderExaminerList() {
 }
 
 function renderExaminerInfo(name, designation) {
-  const infoEl = document.getElementById('examiner-info');
-  const nameEl = infoEl?.querySelector('.examiner-name');
-  const desigEl = infoEl?.querySelector('.examiner-desig');
+  const nameEl = document.getElementById('examiner-name');
+  const desigEl = document.getElementById('examiner-desig');
   if (nameEl) nameEl.textContent = name;
-  if (desigEl) desigEl.textContent = designation;
-  setDisplay(infoEl, true);
+  if (desigEl) desigEl.textContent = designation || '';
 }
 
 
@@ -658,8 +680,9 @@ function renderSectionChecklist() {
       saveSelectedSections(state.selectedSectionIds);
     });
 
-    const content = document.createElement('div');
-    content.innerHTML = `<strong>${section.section_name}</strong><span>${section.section_type}</span>`;
+   const content = document.createElement('div');
+    const maxMarks = section.max_marks != null ? section.max_marks : '—';
+    content.innerHTML = `<strong>${section.section_name}</strong><span>${section.section_type} • পূর্ণমান: ${maxMarks}</span>`;
 
     label.append(checkbox, content);
     sectionListEl.appendChild(label);
@@ -767,10 +790,12 @@ async function startEvaluationFlow() {
   state.activeSection = selectedSections[0];
   state.activeDifficulty = 'easy';
   state.lastRating = null;
+  state.sectionScoreAccum = 0;
   state.sectionResults = [];
   saveSelectedSections(state.selectedSectionIds);
   showEvaluationScreen();
   updateSectionInfoBar();
+  updateSuggestedScoreInput(0);
   await loadActiveQuestion();
 }
 
@@ -846,7 +871,7 @@ async function handleRatingSelection(rating) {
   const nextDifficulty = ['easy', 'medium', 'hard'][currentIndex + 1] ?? null;
 
   if (currentDifficulty === 'hard') {
-    updateScoreForCurrentOutcome(currentDifficulty, rating);
+    recordStageScore(currentDifficulty, rating);
     setEvaluationStatus(`✓ [${rating.toUpperCase()}] recorded. Click ' lock section' to finish.`);
     return;
   }
@@ -867,7 +892,7 @@ async function handleRatingSelection(rating) {
     }
   }
 
-  updateScoreForCurrentOutcome(currentDifficulty, rating);
+  recordStageScore(currentDifficulty, rating);
   setEvaluationStatus(`✓ Rating recorded (${rating}). Section score calculated.`);
 }
 
@@ -1026,7 +1051,13 @@ function handleLogout() {
   clearStoredValue(storageKeys.candidateId);
   clearStoredValue(storageKeys.candidateRollNo);
   clearStoredValue(storageKeys.selectedSectionIds);
-  
+
+  if (rollNoInput) rollNoInput.value = '';
+  if (candidateNameEl) candidateNameEl.textContent = '';
+  if (candidatePostEl) candidatePostEl.textContent = '';
+  if (candidateMatchCard) candidateMatchCard.classList.add('hidden');
+  if (newCandidateForm) newCandidateForm.classList.add('hidden');
+
   state.examiners = [];
   state.candidate = null;
   state.sections = [];
@@ -1036,6 +1067,7 @@ function handleLogout() {
   state.activeQuestion = null;
   state.activeDifficulty = 'easy';
   state.lastRating = null;
+  state.sectionScoreAccum = 0;
   state.directEntry = false;
   state.sectionResults = [];
   
@@ -1057,6 +1089,12 @@ async function hydrateSession() {
   if (storedExaminerId) {
     if (statusEl && storedExaminerName) {
       statusEl.textContent = `Logged in as ${storedExaminerName}`;
+    }
+
+    if (storedExaminerName) {
+      const matchedExaminer = state.examiners.find((examiner) => String(examiner.id) === String(storedExaminerId));
+      const designation = matchedExaminer ? parseExaminerName(matchedExaminer.name).designation : '';
+      renderExaminerInfo(storedExaminerName, designation);
     }
 
     if (storedCandidateRollNo || storedCandidateId) {
