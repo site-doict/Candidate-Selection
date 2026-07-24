@@ -32,6 +32,8 @@ const scoreMethodText = document.getElementById('score-method-text');
 const directScoreInput = document.getElementById('direct-score-input');
 const lockSectionButton = document.getElementById('lock-section-button');
 const nextCandidateButton = document.getElementById('next-candidate-button');
+const candidateCommentWrap = document.getElementById('candidate-comment-wrap');
+const candidateCommentInput = document.getElementById('candidate-comment-input');
 const logoutButton = document.getElementById('logout-button');
 const backToSectionsButton = document.getElementById('back-to-sections-button');
 const sectionNameDisplay = document.getElementById('section-name-display');
@@ -146,6 +148,14 @@ function clearEvaluationState() {
     nextCandidateButton.classList.add('hidden');
   }
 
+  if (candidateCommentWrap) {
+    candidateCommentWrap.classList.add('hidden');
+  }
+
+  if (candidateCommentInput) {
+    candidateCommentInput.value = '';
+  }
+
   if (evaluationStatusEl) {
     evaluationStatusEl.textContent = '';
   }
@@ -180,6 +190,26 @@ function getExaminerId() {
 function getCandidateId() {
   const value = readStoredValue(storageKeys.candidateId);
   return value || null;
+}
+
+async function saveCandidateComment() {
+  const comment = candidateCommentInput?.value.trim();
+  if (!comment) return;
+
+  const candidateId = getCandidateId();
+  const examinerId = getExaminerId();
+  if (!supabase || !candidateId || !examinerId) return;
+
+  const { error } = await supabase
+    .from('candidate_notes')
+    .upsert(
+      { candidate_id: candidateId, examiner_id: examinerId, comment, updated_at: new Date().toISOString() },
+      { onConflict: 'candidate_id,examiner_id' },
+    );
+
+  if (error) {
+    console.error(error);
+  }
 }
 
 function isPracticalSection(section) {
@@ -517,9 +547,12 @@ function moveToNextSectionOrFinish() {
   const selectedSections = getSelectedSectionsInOrder();
   state.activeSectionIndex += 1;
 
-  if (state.activeSectionIndex >= selectedSections.length) {
+ if (state.activeSectionIndex >= selectedSections.length) {
     if (nextCandidateButton) {
       nextCandidateButton.classList.remove('hidden');
+    }
+    if (candidateCommentWrap) {
+      candidateCommentWrap.classList.remove('hidden');
     }
     if (lockSectionButton) {
       lockSectionButton.classList.add('hidden');
@@ -1071,7 +1104,8 @@ function handleStartSections() {
   });
 }
 
-function handleNextCandidate() {
+async function handleNextCandidate() {
+  await saveCandidateComment();
   resetCandidateAndSectionState();
   showScreen(screenCandidate);
 }
