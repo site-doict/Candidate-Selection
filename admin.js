@@ -600,7 +600,7 @@ function toggleCandidateDetails(candidateId) {
 
 // ── CSV Export ────────────────────────────────────────────────────────────────
 function downloadCsv(text) {
-  const blob = new Blob([text], { type: 'text/csv;charset=utf-8;' });
+  const blob = new Blob(['\uFEFF' + text], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
