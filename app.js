@@ -680,9 +680,10 @@ function renderSectionChecklist() {
       saveSelectedSections(state.selectedSectionIds);
     });
 
-   const content = document.createElement('div');
+ const content = document.createElement('div');
+    content.className = 'check-row-content';
     const maxMarks = section.max_marks != null ? section.max_marks : '—';
-    content.innerHTML = `<strong>${section.section_name}</strong><span>${section.section_type} • পূর্ণমান: ${maxMarks}</span>`;
+    content.innerHTML = `<strong>${section.section_name}</strong><span class="section-meta-badge">${section.section_type} • পূর্ণমান: ${maxMarks}</span>`;
 
     label.append(checkbox, content);
     sectionListEl.appendChild(label);
