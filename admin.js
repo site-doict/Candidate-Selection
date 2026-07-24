@@ -42,6 +42,7 @@ const state = {
   finalMarks: [],
   marks: [],
   examiners: [],
+  examinerSections: [],
   expandedCandidateIds: new Set(),
   pendingDeleteExaminerId: null,
 };
@@ -197,6 +198,56 @@ function parseExaminerName(rawName) {
   return { name: rawName, designation: null };
 }
 
+function getAssignedSectionIds(examinerId) {
+  return new Set(
+    state.examinerSections
+      .filter((row) => normalizeId(row.examiner_id) === normalizeId(examinerId))
+      .map((row) => normalizeId(row.section_id)),
+  );
+}
+
+function getExaminerTotalMarks(examinerId) {
+  const assignedIds = getAssignedSectionIds(examinerId);
+  return state.sections
+    .filter((section) => assignedIds.has(normalizeId(section.id)))
+    .reduce((sum, section) => sum + Number(section.max_marks ?? 0), 0);
+}
+
+async function handleToggleExaminerSection(examinerId, sectionId, isChecked) {
+  if (!supabase) return;
+
+  if (isChecked) {
+    const { error } = await supabase
+      .from('examiner_sections')
+      .upsert({ examiner_id: examinerId, section_id: sectionId }, { onConflict: 'examiner_id,section_id' });
+    if (error) {
+      console.error(error);
+      alert('সেকশন যুক্ত করা যায়নি। আবার চেষ্টা করুন।');
+      return;
+    }
+    state.examinerSections.push({ examiner_id: examinerId, section_id: sectionId });
+  } else {
+    const { error } = await supabase
+      .from('examiner_sections')
+      .delete()
+      .eq('examiner_id', examinerId)
+      .eq('section_id', sectionId);
+    if (error) {
+      console.error(error);
+      alert('সেকশন সরানো যায়নি। আবার চেষ্টা করুন।');
+      return;
+    }
+    state.examinerSections = state.examinerSections.filter(
+      (row) => !(normalizeId(row.examiner_id) === normalizeId(examinerId) && normalizeId(row.section_id) === normalizeId(sectionId)),
+    );
+  }
+
+  const totalEl = document.querySelector(`[data-total-marks-for="${examinerId}"]`);
+  if (totalEl) {
+    totalEl.textContent = `মোট মার্ক: ${getExaminerTotalMarks(examinerId)}`;
+  }
+}
+
 function buildExaminerStoredName(name, designation) {
   const trimmedName = name.trim();
   const trimmedDesig = designation?.trim() ?? '';
@@ -214,14 +265,38 @@ function renderExaminerManagementList() {
     return;
   }
 
+  const sortedSections = state.sections
+    .slice()
+    .sort((a, b) => Number(a.section_order ?? 0) - Number(b.section_order ?? 0));
+
   state.examiners.forEach((examiner) => {
     const { name, designation } = parseExaminerName(examiner.name);
+    const assignedIds = getAssignedSectionIds(examiner.id);
+    const totalMarks = getExaminerTotalMarks(examiner.id);
+
     const item = document.createElement('div');
-    item.className = 'examiner-item';
+    item.className = 'examiner-item examiner-item-expanded';
     item.innerHTML = `
       <div class="examiner-info">
         <strong class="examiner-name">${escapeHtml(name)}</strong>
         ${designation ? `<span class="examiner-designation">${escapeHtml(designation)}</span>` : ''}
+        <span class="examiner-total-marks" data-total-marks-for="${escapeHtml(String(examiner.id))}">মোট মার্ক: ${totalMarks}</span>
+      </div>
+      <div class="examiner-section-checklist">
+        ${sortedSections
+          .map(
+            (section) => `
+          <label class="examiner-section-check-row">
+            <input
+              type="checkbox"
+              data-examiner-id="${escapeHtml(String(examiner.id))}"
+              data-section-id="${escapeHtml(String(section.id))}"
+              ${assignedIds.has(normalizeId(section.id)) ? 'checked' : ''}
+            />
+            <span>${escapeHtml(section.section_name)} (${escapeHtml(section.post_type)} • পূর্ণমান: ${escapeHtml(section.max_marks ?? '—')})</span>
+          </label>`,
+          )
+          .join('')}
       </div>
       <button
         class="action-button danger examiner-delete-btn"
@@ -612,12 +687,13 @@ async function loadAdminData() {
 
   setStatus('Loading data');
 
-  const [candidatesResult, sectionsResult, finalMarksResult, marksResult, examinersResult] = await Promise.all([
+  const [candidatesResult, sectionsResult, finalMarksResult, marksResult, examinersResult, examinerSectionsResult] = await Promise.all([
     supabase.from('candidates').select('*').order('roll_no', { ascending: true }),
     supabase.from('sections').select('*'),
     supabase.from('final_marks').select('candidate_id, section_id, final_score, examiner_count'),
     supabase.from('marks').select('candidate_id, examiner_id, section_id, score, method, updated_at'),
     supabase.from('examiners').select('id, name').order('name', { ascending: true }),
+    supabase.from('examiner_sections').select('examiner_id, section_id'),
   ]);
 
   const errors = [
@@ -626,6 +702,7 @@ async function loadAdminData() {
     finalMarksResult.error,
     marksResult.error,
     examinersResult.error,
+    examinerSectionsResult.error,
   ].filter(Boolean);
 
   if (errors.length) {
@@ -639,6 +716,7 @@ async function loadAdminData() {
   state.finalMarks = finalMarksResult.data ?? [];
   state.marks = marksResult.data ?? [];
   state.examiners = examinersResult.data ?? [];
+  state.examinerSections = examinerSectionsResult.data ?? [];
 
   renderCandidateTable();
   renderExaminerManagementList();
@@ -747,6 +825,16 @@ function registerEvents() {
       const name = target.getAttribute('data-examiner-name');
       if (id && name) showDeleteExaminerModal(id, name);
     }
+  });
+
+  // Examiner list — section checkbox toggled (delegated)
+  examinerManagementList?.addEventListener('change', (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement) || target.type !== 'checkbox') return;
+    const examinerId = target.getAttribute('data-examiner-id');
+    const sectionId = target.getAttribute('data-section-id');
+    if (!examinerId || !sectionId) return;
+    handleToggleExaminerSection(examinerId, sectionId, target.checked).catch(console.error);
   });
 
   // Delete examiner modal buttons

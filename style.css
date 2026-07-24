@@ -1250,3 +1250,32 @@ h1 {
     padding: 28px 20px 24px;
   }
 }
+
+.examiner-item-expanded {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.examiner-total-marks {
+  font-weight: 700;
+  color: var(--accent-dark);
+  margin-left: 8px;
+}
+
+.examiner-section-checklist {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--surface-strong);
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.examiner-section-check-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+}

@@ -56,10 +56,11 @@ const state = {
   activeQuestion: null,
   activeDifficulty: 'easy',
   lastRating: null,
-  directEntry: false,
+ directEntry: false,
   sectionResults: [],
   sectionHighestScore: null,
   sectionScoreAccum: 0,
+  assignedSectionIds: [],
 };
 
 const hasConfig =
@@ -594,6 +595,19 @@ function parseExaminerName(rawName) {
   return { name: raw, designation: '' };
 }
 
+async function fetchAssignedSectionIds(examinerId) {
+  if (!supabase || !examinerId) return [];
+  const { data, error } = await supabase
+    .from('examiner_sections')
+    .select('section_id')
+    .eq('examiner_id', examinerId);
+  if (error) {
+    console.error(error);
+    return [];
+  }
+  return (data ?? []).map((row) => row.section_id);
+}
+
 function renderExaminerList() {
   if (!examinerListEl) {
     return;
@@ -612,15 +626,18 @@ function renderExaminerList() {
     button.type = 'button';
     button.className = 'examiner-button action-button';
   button.innerHTML = `<span class="examiner-name">${name}</span> <span class="examiner-desig">${designation ? `(${designation})` : ''}</span>`;
-    button.addEventListener('click', () => {
-      writeStoredValue(storageKeys.examinerId, String(examiner.id));
-      writeStoredValue(storageKeys.examinerName, name);
-      if (statusEl) {
-        statusEl.textContent = `Logged in as ${name}`;
-      }
-      renderExaminerInfo(name, designation);
-      showScreen(screenCandidate);
-    });
+  button.addEventListener('click', () => {
+        writeStoredValue(storageKeys.examinerId, String(examiner.id));
+        writeStoredValue(storageKeys.examinerName, name);
+        if (statusEl) {
+          statusEl.textContent = `Logged in as ${name}`;
+        }
+        renderExaminerInfo(name, designation);
+        fetchAssignedSectionIds(examiner.id).then((ids) => {
+          state.assignedSectionIds = ids;
+        });
+        showScreen(screenCandidate);
+      });
     examinerListEl.appendChild(button);
   });
 }
@@ -654,6 +671,12 @@ function renderCandidateSummary() {
 function renderSectionChecklist() {
   if (!sectionListEl) {
     return;
+  }
+
+  const totalMarksEl = document.getElementById('assigned-total-marks');
+  if (totalMarksEl) {
+    const totalMarks = state.sections.reduce((sum, section) => sum + Number(section.max_marks ?? 0), 0);
+    totalMarksEl.textContent = `আপনার নম্বর দেওয়ার সুযোগ: ${state.sections.length} টি সেকশন, মোট ${totalMarks} নম্বর`;
   }
 
   sectionListEl.innerHTML = '';
@@ -765,6 +788,11 @@ async function loadSectionsForPost(postApplied) {
         (row) => String(row.post_type ?? '').trim().toLowerCase() === normalizedPost,
       );
     }
+  }
+
+  if (state.assignedSectionIds && state.assignedSectionIds.length) {
+    const allowedIds = new Set(state.assignedSectionIds.map(String));
+    sections = sections.filter((section) => allowedIds.has(String(section.id)));
   }
 
   state.sections = sections;
@@ -1104,6 +1132,7 @@ async function hydrateSession() {
       const matchedExaminer = state.examiners.find((examiner) => String(examiner.id) === String(storedExaminerId));
       const designation = matchedExaminer ? parseExaminerName(matchedExaminer.name).designation : '';
       renderExaminerInfo(storedExaminerName, designation);
+      state.assignedSectionIds = await fetchAssignedSectionIds(storedExaminerId);
     }
 
     if (storedCandidateRollNo || storedCandidateId) {
