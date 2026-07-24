@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0f172a" />
     <title>Recruitment Exam Evaluation</title>
-    <link rel="stylesheet" href="./style.css" />
+    <link rel="stylesheet" href="./style.css?v=2" />
   </head>
   <body>
     <div class="app-shell">
       <header class="app-header">
-<div class="examiner-top">
+<div class="examiner-top hidden" id="examiner-top"></div>
   <span class="examiner-name" id="examiner-name"></span>
   <span class="examiner-desig" id="examiner-desig"></span>
   <button class="action-button small" id="logout-button" type="button">Logout</button>
@@ -144,6 +144,6 @@
         </section>
       </main>
     </div>
-    <script type="module" src="./app.js"></script>
+  <script type="module" src="./app.js?v=2" defer></script>
   </body>
 </html>

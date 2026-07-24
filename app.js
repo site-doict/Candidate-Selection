@@ -607,29 +607,31 @@ function renderExaminerList() {
   }
 
   state.examiners.forEach((examiner) => {
-      const { name, designation } = parseExaminerName(examiner.name);
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'examiner-button action-button';
-      button.innerHTML = `<span class="examiner-name">${name}</span><span class="examiner-desig">${designation || ''}</span>`;
-      button.addEventListener('click', () => {
-        writeStoredValue(storageKeys.examinerId, String(examiner.id));
-        writeStoredValue(storageKeys.examinerName, name);
-        if (statusEl) {
-          statusEl.textContent = `Logged in as ${name}`;
-        }
-        renderExaminerInfo(name, designation);
-        showScreen(screenCandidate);
-      });
-      examinerListEl.appendChild(button);
+    const { name, designation } = parseExaminerName(examiner.name);
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'examiner-button action-button';
+    button.innerHTML = `<span class="examiner-name">${name}</span><span class="examiner-desig">${designation || ''}</span>`;
+    button.addEventListener('click', () => {
+      writeStoredValue(storageKeys.examinerId, String(examiner.id));
+      writeStoredValue(storageKeys.examinerName, name);
+      if (statusEl) {
+        statusEl.textContent = `Logged in as ${name}`;
+      }
+      renderExaminerInfo(name, designation);
+      showScreen(screenCandidate);
+    });
+    examinerListEl.appendChild(button);
   });
 }
 
 function renderExaminerInfo(name, designation) {
+  const topBarEl = document.getElementById('examiner-top');
   const nameEl = document.getElementById('examiner-name');
   const desigEl = document.getElementById('examiner-desig');
   if (nameEl) nameEl.textContent = name;
   if (desigEl) desigEl.textContent = designation || '';
+  if (topBarEl) topBarEl.classList.remove('hidden');
 }
 
 
@@ -680,7 +682,7 @@ function renderSectionChecklist() {
       saveSelectedSections(state.selectedSectionIds);
     });
 
- const content = document.createElement('div');
+    const content = document.createElement('div');
     content.className = 'check-row-content';
     const maxMarks = section.max_marks != null ? section.max_marks : '—';
     content.innerHTML = `<strong>${section.section_name}</strong><span class="section-meta-badge">${section.section_type} • পূর্ণমান: ${maxMarks}</span>`;
@@ -1054,6 +1056,12 @@ function handleLogout() {
   clearStoredValue(storageKeys.selectedSectionIds);
 
   if (rollNoInput) rollNoInput.value = '';
+  const examinerTopEl = document.getElementById('examiner-top');
+  const examinerNameEl = document.getElementById('examiner-name');
+  const examinerDesigEl = document.getElementById('examiner-desig');
+  if (examinerNameEl) examinerNameEl.textContent = '';
+  if (examinerDesigEl) examinerDesigEl.textContent = '';
+  if (examinerTopEl) examinerTopEl.classList.add('hidden');
   if (candidateNameEl) candidateNameEl.textContent = '';
   if (candidatePostEl) candidatePostEl.textContent = '';
   if (candidateMatchCard) candidateMatchCard.classList.add('hidden');
@@ -1071,11 +1079,11 @@ function handleLogout() {
   state.sectionScoreAccum = 0;
   state.directEntry = false;
   state.sectionResults = [];
-  
+
   if (statusEl) {
     statusEl.textContent = hasConfig ? 'Supabase configured' : 'Add Supabase credentials in config.js';
   }
-  
+
   showScreen(screenLogin);
   loadExaminers();
 }
