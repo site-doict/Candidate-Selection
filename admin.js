@@ -297,6 +297,10 @@ function renderExaminerManagementList() {
         <strong class="examiner-name">${escapeHtml(name)}</strong>
         ${designation ? `<span class="examiner-designation">${escapeHtml(designation)}</span>` : ''}
         <span class="examiner-total-marks" data-total-marks-for="${escapeHtml(String(examiner.id))}">মোট মার্ক: ${totalMarks}</span>
+        <label style="margin-left:auto; display:flex; align-items:center; gap:6px; font-size:0.9rem; color:#64748b;">
+          <input type="checkbox" class="no-clue-toggle" data-examiner-id="${escapeHtml(String(examiner.id))}" ${examiner.no_question_clue ? 'checked' : ''} />
+          No Question Clue
+        </label>
       </div>
       <div class="examiner-section-checklist">
         ${sortedSections
@@ -363,7 +367,7 @@ async function handleAddExaminer(event) {
     // Refresh examiner list
     const { data } = await supabase
       .from('examiners')
-      .select('id, name')
+      .select('id, name, no_question_clue')
       .order('name', { ascending: true });
     state.examiners = data ?? [];
     renderExaminerManagementList();
@@ -743,7 +747,11 @@ async function loadAdminData() {
     supabase.from('final_marks').select('candidate_id, section_id, final_score, examiner_count'),
     supabase.from('marks').select('candidate_id, examiner_id, section_id, score, method, updated_at'),
     supabase.from('candidate_notes').select('candidate_id, examiner_id, comment, updated_at'),
-    supabase.from('examiners').select('id, name').order('name', { ascending: true }),
+    supabase.from('examiners').select('id, name, no_question_clue').order('name', { ascending: true })
+      .then(res => {
+        if (res.error) return supabase.from('examiners').select('id, name').order('name', { ascending: true });
+        return res;
+      }),
     supabase.from('examiner_sections').select('examiner_id, section_id'),
   ]);
 
@@ -880,10 +888,32 @@ function registerEvents() {
     }
   });
 
-  // Examiner list — section checkbox toggled (delegated)
+  // Examiner list — section checkbox / no-clue checkbox toggled (delegated)
   examinerManagementList?.addEventListener('change', (event) => {
     const target = event.target;
     if (!(target instanceof HTMLInputElement) || target.type !== 'checkbox') return;
+    
+    if (target.classList.contains('no-clue-toggle')) {
+      const examinerId = target.getAttribute('data-examiner-id');
+      if (examinerId) {
+        supabase
+          .from('examiners')
+          .update({ no_question_clue: target.checked })
+          .eq('id', examinerId)
+          .then(({ error }) => {
+            if (error) {
+              console.error(error);
+              alert('No Question Clue সেটিং আপডেট করা যায়নি।');
+              target.checked = !target.checked; // Revert on UI
+            } else {
+              const examiner = state.examiners.find((e) => String(e.id) === examinerId);
+              if (examiner) examiner.no_question_clue = target.checked;
+            }
+          });
+      }
+      return;
+    }
+
     const examinerId = target.getAttribute('data-examiner-id');
     const sectionId = target.getAttribute('data-section-id');
     if (!examinerId || !sectionId) return;

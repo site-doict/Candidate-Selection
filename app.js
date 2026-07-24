@@ -682,6 +682,7 @@ function renderExaminerList() {
   button.addEventListener('click', () => {
         writeStoredValue(storageKeys.examinerId, String(examiner.id));
         writeStoredValue(storageKeys.examinerName, name);
+        writeStoredValue('noQuestionClue', String(examiner.no_question_clue === true));
         if (statusEl) {
           statusEl.textContent = `Logged in as ${name}`;
         }
@@ -775,10 +776,20 @@ async function loadExaminers() {
     return;
   }
 
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from('examiners')
-    .select('id, name')
+    .select('id, name, no_question_clue')
     .order('name', { ascending: true });
+
+  if (error) {
+    console.warn('Could not fetch no_question_clue (column might be missing). Falling back to basic fetch.');
+    const res = await supabase
+      .from('examiners')
+      .select('id, name')
+      .order('name', { ascending: true });
+    data = res.data;
+    error = res.error;
+  }
 
   if (error) {
     console.error(error);
@@ -876,6 +887,10 @@ async function startEvaluationFlow() {
   state.lastRating = null;
   state.sectionScoreAccum = 0;
   state.sectionResults = [];
+  
+  const noQuestionClue = readStoredValue('noQuestionClue') === 'true';
+  document.body.classList.toggle('no-clue-mode', noQuestionClue);
+
   saveSelectedSections(state.selectedSectionIds);
   showEvaluationScreen();
   updateSectionInfoBar();
@@ -1020,6 +1035,16 @@ async function handleLockSection() {
   const scoreValue = state.directEntry
     ? Number(directScoreInput?.value ?? suggestedScoreInput?.value ?? 0)
     : Number(suggestedScoreInput?.value ?? 0);
+
+  const maxMarks = Number(state.activeSection.max_marks ?? 0);
+  if (maxMarks > 0 && scoreValue > maxMarks) {
+    alert(`দুঃখিত, এই সেকশনের পূর্ণমান ${maxMarks}। আপনি এর চেয়ে বেশি নম্বর এন্ট্রি করতে পারবেন না।`);
+    return;
+  }
+  if (scoreValue < 0) {
+    alert('নম্বর ০ এর চেয়ে কম হতে পারে না।');
+    return;
+  }
 
   const method = getCurrentMethod();
 

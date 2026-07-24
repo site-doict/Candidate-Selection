@@ -1359,7 +1359,211 @@ textarea.text-input {
   color: #5b21b6;
 }
 
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid rgba(18, 32, 51, 0.1);
+  transition: box-shadow 0.18s ease;
+}
+
+.examiner-item:hover {
+  box-shadow: 0 4px 16px rgba(18, 32, 51, 0.08);
+}
+
+.examiner-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.examiner-name {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.examiner-designation {
+  font-size: 0.85rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+/* ── Danger Button ─────────────────────────────────────────────────────────── */
+.action-button.danger {
+  background: linear-gradient(180deg, #ef4444 0%, #dc2626 100%);
+  color: #ffffff;
+  box-shadow: 0 8px 20px rgba(220, 38, 38, 0.28);
+}
+
+.action-button.danger:hover {
+  background: linear-gradient(180deg, #dc2626 0%, #b91c1c 100%);
+}
+
+.examiner-delete-btn {
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 14px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Delete Confirm Modal ──────────────────────────────────────────────────── */
+.delete-confirm-panel {
+  position: relative;
+  z-index: 1;
+  width: min(420px, calc(100% - 32px));
+  background: #ffffff;
+  border-radius: 28px;
+  box-shadow: 0 40px 80px rgba(10, 18, 30, 0.3);
+  padding: 36px 32px 32px;
+  display: grid;
+  gap: 12px;
+  text-align: center;
+  border-top: 5px solid #ef4444;
+  animation: confirmAppear 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes confirmAppear {
+  from { opacity: 0; transform: scale(0.88) translateY(16px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.delete-confirm-icon {
+  font-size: 3rem;
+  line-height: 1;
+}
+
+.delete-confirm-panel h2 {
+  font-size: 1.35rem;
+  margin: 0;
+}
+
+.delete-confirm-message {
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.delete-confirm-note {
+  font-size: 0.88rem;
+  margin: 0;
+}
+
+.delete-confirm-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+@media (max-width: 719px) {
+  .examiner-form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .examiner-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .examiner-delete-btn {
+    width: 100%;
+  }
+
+  .admin-login-box {
+    padding: 28px 20px 24px;
+  }
+}
+
+.examiner-item-expanded {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.examiner-total-marks {
+  font-weight: 700;
+  color: var(--accent-dark);
+  margin-left: 8px;
+}
+
+.examiner-section-checklist {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--surface-strong);
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.examiner-section-check-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  flex-wrap: wrap;
+}
+
+.section-check-name {
+  flex: 1;
+}
+
+.section-check-marks {
+  font-weight: 700;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.post-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.post-tag-supervisor {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.post-tag-counter {
+  background: #fce7f3;
+  color: #9d174d;
+}
+
+.type-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.type-tag-practical {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.type-tag-viva {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+
 .type-tag-gpa {
   background: #d1fae5;
   color: #065f46;
+}
+
+/* No Question Clue Mode */
+.no-clue-mode .question-card,
+.no-clue-mode #rating-grid,
+.no-clue-mode #direct-entry-toggle-row,
+.no-clue-mode #score-method-text,
+.no-clue-mode #evaluation-status {
+  display: none !important;
 }
