@@ -35,17 +35,21 @@
       <header class="app-header admin-header">
         <div>
           <p class="eyebrow">Recruitment Exam Evaluation</p>
-          <h1>Admin dashboard</h1>
-          <p class="subtitle">Candidates, section totals, pass/fail status, and examiner-wise breakdowns.</p>
+          <h1>Examiner Dashboard</h1>
         </div>
         <div class="admin-actions">
           <button class="action-button primary" id="export-csv-button" type="button">CSV Export</button>
           <button class="action-button" id="delete-all-button" type="button">Delete All Candidates</button>
           <a class="action-button admin-link" href="./index.html">Evaluation App</a>
-          <button class="action-button" id="admin-logout-button" type="button">লগআউট</button>
-          <div class="status-pill" id="admin-status">Loading data</div>
         </div>
       </header>
+      <section class="panel examiner-info hidden" id="examiner-info">
+        <div class="card admin-card">
+          <h2 class="eyebrow">Examiner</h2>
+          <p><span class="examiner-name" style="color:#0f6dfd;"></span> — <span class="examiner-desig" style="color:#ff4d4f;"></span></p>
+          <button class="action-button" id="examiner-logout-button" type="button">Logout</button>
+        </div>
+      </section>
 
       <main class="admin-main">
 

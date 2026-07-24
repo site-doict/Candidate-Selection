@@ -12,14 +12,18 @@
       <header class="app-header">
         <div>
           <p class="eyebrow">Recruitment Exam Evaluation</p>
-          <h1>Candidate scoring dashboard</h1>
-          <p class="subtitle">
-            A mobile-friendly exam evaluation workspace for examiners.
-          </p>
+          <h1>Examiner Dashboard</h1>
         </div>
-        <div class="status-pill" id="connection-status">Supabase ready</div>
-        <button class="action-button" id="logout-button" type="button">Logout</button>
+        <div class="admin-actions">
+          <button class="action-button" id="examiner-logout-button" type="button">Logout</button>
+        </div>
       </header>
+      <section class="panel examiner-info hidden" id="examiner-info">
+        <div class="card admin-card">
+          <h2 class="eyebrow">Examiner</h2>
+          <p><span class="examiner-name" style="color:#0f6dfd;"></span> — <span class="examiner-desig" style="color:#ff4d4f;"></span></p>
+        </div>
+      </section>
 
       <main id="app">
         <section class="screen active" id="screen-login" aria-labelledby="screen-login-title">

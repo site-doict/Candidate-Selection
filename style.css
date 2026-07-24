@@ -384,12 +384,34 @@ h1 {
   border: 1px solid rgba(18, 32, 51, 0.08);
 }
 
+/* Examiner info styling */
+.examiner-info .card {
+  padding: 20px 24px;
+}
+.examiner-name {
+  font-weight: 700;
+  color: #0f6dfd; /* primary accent */
+}
+.examiner-desig {
+  font-weight: 600;
+  color: #ff4d4f; /* warning/red */
+}
+/* Small logout button */
+.examiner-info .action-button {
+  min-height: 36px;
+  padding: 0 12px;
+  font-size: 0.9rem;
+}
+/* Question label simple green background */
 .question-label {
+  background: #dcfce7; /* light green */
+  color: #166534; /* dark green */
+  padding: 4px 8px;
+  border-radius: 8px;
   margin-bottom: 10px;
   font-size: 0.85rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--muted);
   font-weight: 700;
 }
 

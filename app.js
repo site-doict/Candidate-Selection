@@ -584,17 +584,17 @@ function renderExaminerList() {
   }
 
   state.examiners.forEach((examiner) => {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'action-button';
-    button.textContent = examiner.name;
-    button.addEventListener('click', () => {
-      writeStoredValue(storageKeys.examinerId, String(examiner.id));
-      writeStoredValue(storageKeys.examinerName, examiner.name);
-      statusEl.textContent = `Logged in as ${examiner.name}`;
-      showScreen(screenCandidate);
-    });
-    examinerListEl.appendChild(button);
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'examiner-button action-button';
+      button.innerHTML = `<span class="examiner-name">${examiner.name}</span><span class="examiner-desig">${examiner.designation || ''}</span>`;
+      button.addEventListener('click', () => {
+        writeStoredValue(storageKeys.examinerId, String(examiner.id));
+        writeStoredValue(storageKeys.examinerName, examiner.name);
+        statusEl.textContent = `Logged in as ${examiner.name}`;
+        showScreen(screenCandidate);
+      });
+      examinerListEl.appendChild(button);
   });
 }
 
