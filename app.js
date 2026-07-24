@@ -497,7 +497,7 @@ async function loadActiveQuestion() {
       questionTextEl.textContent = 'GPA ভিত্তিক সেকশন: প্রাপ্ত নম্বর সরাসরি প্রবেশ করান।';
     }
     setDirectEntryMode(true);
-    setEvaluationStatus(`Section: ${state.activeSection.section_name} (GPA)`);
+    setEvaluationStatus('GPA ভিত্তিক সেকশন — পূর্ণমান অনুযায়ী নম্বর দিন।');
     return;
   }
 
@@ -538,7 +538,7 @@ async function loadActiveQuestion() {
     console.log('Question text set to:', questionTextEl.textContent);
   }
 
-  setEvaluationStatus(state.activeSection.section_name);
+  setEvaluationStatus('');
 
   console.log('Current screen state - checking if evaluation screen is visible');
 }
@@ -929,14 +929,15 @@ async function handleRatingSelection(rating) {
   state.lastRating = rating;
   state.sectionResults.push({ difficulty: state.activeQuestion.difficulty, rating });
 
-  const currentDifficulty = state.activeQuestion.difficulty;
+ const currentDifficulty = state.activeQuestion.difficulty;
   const isPass = rating === 'good' || rating === 'excellent';
   const currentIndex = ['easy', 'medium', 'hard'].indexOf(currentDifficulty);
   const nextDifficulty = ['easy', 'medium', 'hard'][currentIndex + 1] ?? null;
 
+  recordStageScore(currentDifficulty, rating);
+
   if (currentDifficulty === 'hard') {
-    recordStageScore(currentDifficulty, rating);
-    setEvaluationStatus(`✓ [${rating.toUpperCase()}] recorded. Click ' lock section' to finish.`);
+    setEvaluationStatus('');
     return;
   }
 
@@ -956,7 +957,6 @@ async function handleRatingSelection(rating) {
     }
   }
 
-  recordStageScore(currentDifficulty, rating);
   setEvaluationStatus(`✓ Rating recorded (${rating}). Section score calculated.`);
 }
 
