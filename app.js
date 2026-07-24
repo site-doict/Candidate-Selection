@@ -970,7 +970,7 @@ async function handleRatingSelection(rating) {
     return;
   }
 
-  if (isPass && nextDifficulty) {
+  if (nextDifficulty) {
     state.activeDifficulty = nextDifficulty;
     const nextQuestion = await fetchNextAvailableQuestion(state.activeSection.id, candidateId, [nextDifficulty]);
     if (nextQuestion) {
