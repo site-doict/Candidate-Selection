@@ -158,6 +158,8 @@ function showEvaluationScreen() {
   renderCandidateSummary();
   renderSectionChecklist();
   showScreen(screenEvaluation);
+  // Hide examiner info on evaluation screen to keep UI clean
+  setDisplay(document.getElementById('examiner-info'), false);
 }
 
 function getSelectedSectionsInOrder() {
@@ -592,11 +594,23 @@ function renderExaminerList() {
         writeStoredValue(storageKeys.examinerId, String(examiner.id));
         writeStoredValue(storageKeys.examinerName, examiner.name);
         statusEl.textContent = `Logged in as ${examiner.name}`;
+        renderExaminerInfo(examiner.name, examiner.designation);
         showScreen(screenCandidate);
       });
       examinerListEl.appendChild(button);
   });
 }
+
+function renderExaminerInfo(name, designation) {
+  const infoEl = document.getElementById('examiner-info');
+  const nameEl = infoEl?.querySelector('.examiner-name');
+  const desigEl = infoEl?.querySelector('.examiner-desig');
+  if (nameEl) nameEl.textContent = name;
+  if (desigEl) desigEl.textContent = designation;
+  setDisplay(infoEl, true);
+}
+
+
 
 function renderCandidateSummary() {
   if (!state.candidate) {
