@@ -86,9 +86,19 @@
 
         <section class="screen hidden" id="screen-evaluation" aria-labelledby="screen-evaluation-title">
           <div class="panel">
-            <h2 id="screen-evaluation-title">Section Evaluation</h2>
+            <div class="eval-header-row">
+              <button class="back-button" id="back-to-sections-button" type="button">&#8592; ফিরে যান</button>
+              <h2 id="screen-evaluation-title">Section Evaluation</h2>
+            </div>
             <div class="card stack evaluation-card">
               <div class="summary-strip" id="evaluation-summary"></div>
+
+              <div class="section-info-bar" id="section-info-bar">
+                <span class="section-name-label" id="section-name-display"></span>
+                <span class="max-marks-badge" id="max-marks-display">পূর্ণমান: —</span>
+              </div>
+
+              <div class="difficulty-banner hidden" id="difficulty-banner"></div>
 
               <div class="evaluation-status" id="evaluation-status"></div>
 

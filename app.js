@@ -33,6 +33,10 @@ const directScoreInput = document.getElementById('direct-score-input');
 const lockSectionButton = document.getElementById('lock-section-button');
 const nextCandidateButton = document.getElementById('next-candidate-button');
 const logoutButton = document.getElementById('logout-button');
+const backToSectionsButton = document.getElementById('back-to-sections-button');
+const sectionNameDisplay = document.getElementById('section-name-display');
+const maxMarksDisplay = document.getElementById('max-marks-display');
+const difficultyBanner = document.getElementById('difficulty-banner');
 
 const storageKeys = {
   examinerId: 'evaluation_examiner_id',
@@ -54,6 +58,7 @@ const state = {
   lastRating: null,
   directEntry: false,
   sectionResults: [],
+  sectionHighestScore: null,
 };
 
 const hasConfig =
@@ -67,7 +72,7 @@ if (statusEl) {
 }
 
 function showScreen(activeScreen) {
-  [screenLogin, screenCandidate, screenSections].forEach((screen) => {
+  [screenLogin, screenCandidate, screenSections, screenEvaluation].forEach((screen) => {
     if (!screen) {
       return;
     }
@@ -226,6 +231,69 @@ function getSuggestedScoreFromOutcome(outcome) {
   return Math.round((maxMarks * percentage) / 100);
 }
 
+function highlightSelectedRating(rating) {
+  if (!ratingGridEl) return;
+  const buttons = ratingGridEl.querySelectorAll('.rating-button');
+  buttons.forEach((btn) => {
+    const isSelected = btn.getAttribute('data-rating') === rating;
+    btn.classList.toggle('active', isSelected);
+    if (isSelected) {
+      btn.classList.remove('pulse-anim');
+      void btn.offsetWidth;
+      btn.classList.add('pulse-anim');
+    }
+  });
+}
+
+function clearRatingHighlights() {
+  if (!ratingGridEl) return;
+  const buttons = ratingGridEl.querySelectorAll('.rating-button');
+  buttons.forEach((btn) => {
+    btn.classList.remove('active', 'pulse-anim');
+  });
+}
+
+function animateQuestionCard() {
+  if (!questionCardEl) return;
+  questionCardEl.classList.remove('card-anim');
+  void questionCardEl.offsetWidth;
+  questionCardEl.classList.add('card-anim');
+}
+
+function showDifficultyBanner(difficulty) {
+  if (!difficultyBanner) return;
+
+  const labels = { easy: 'সহজ ✦', medium: 'মাঝারি ✦✦', hard: 'কঠিন ✦✦✦' };
+  const classes = { easy: 'banner-easy', medium: 'banner-medium', hard: 'banner-hard' };
+
+  difficultyBanner.textContent = labels[difficulty] ?? difficulty;
+  difficultyBanner.className = 'difficulty-banner ' + (classes[difficulty] ?? '');
+  difficultyBanner.classList.remove('banner-anim');
+  void difficultyBanner.offsetWidth;
+  difficultyBanner.classList.add('banner-anim');
+}
+
+function updateSectionInfoBar() {
+  const section = state.activeSection;
+  if (!section) return;
+
+  if (sectionNameDisplay) {
+    sectionNameDisplay.textContent = section.section_name ?? '';
+  }
+  if (maxMarksDisplay) {
+    const max = section.max_marks != null ? section.max_marks : '—';
+    maxMarksDisplay.textContent = `পূর্ণমান: ${max}`;
+  }
+}
+
+function animateScoreUpdate() {
+  const scoreEditor = document.querySelector('.score-editor');
+  if (!scoreEditor) return;
+  scoreEditor.classList.remove('score-updated');
+  void scoreEditor.offsetWidth;
+  scoreEditor.classList.add('score-updated');
+}
+
 function updateSuggestedScoreInput(score) {
   if (!suggestedScoreInput || !scoreLabelEl) {
     return;
@@ -233,7 +301,15 @@ function updateSuggestedScoreInput(score) {
 
   const maxMarks = Number(state.activeSection?.max_marks ?? 0);
   suggestedScoreInput.value = String(score);
-  scoreLabelEl.textContent = `প্রাপ্ত নম্বর (সর্বোচ্চ ${maxMarks})`;
+
+  const highest = state.sectionHighestScore;
+  if (highest != null) {
+    scoreLabelEl.textContent = `প্রাপ্ত নম্বর (পূর্ণমান ${maxMarks} | এ যাবৎ সর্বোচ্চ ${highest})`;
+  } else {
+    scoreLabelEl.textContent = `প্রাপ্ত নম্বর (পূর্ণমান ${maxMarks})`;
+  }
+
+  animateScoreUpdate();
 }
 
 function updateScoreForCurrentOutcome(difficulty, rating) {
@@ -283,7 +359,7 @@ async function loadExistingQuestionIdsForCandidateSection(candidateId, sectionId
 async function fetchNextQuestion(sectionId, difficulty, candidateId) {
   const usedQuestionIds = await loadExistingQuestionIdsForCandidateSection(candidateId, sectionId);
 
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from('questions')
     .select('id, section_id, difficulty, question_text')
     .eq('section_id', sectionId)
@@ -291,6 +367,27 @@ async function fetchNextQuestion(sectionId, difficulty, candidateId) {
 
   if (error) {
     throw error;
+  }
+
+  // Fallback: If 0 questions for this exact section_id, look up sections with matching section_name
+  if ((!data || !data.length) && state.activeSection?.section_name) {
+    const { data: matchingSections } = await supabase
+      .from('sections')
+      .select('id')
+      .eq('section_name', state.activeSection.section_name);
+
+    if (matchingSections && matchingSections.length) {
+      const sectionIds = matchingSections.map((s) => s.id);
+      const res = await supabase
+        .from('questions')
+        .select('id, section_id, difficulty, question_text')
+        .in('section_id', sectionIds)
+        .eq('difficulty', difficulty);
+
+      if (!res.error && res.data) {
+        data = res.data;
+      }
+    }
   }
 
   const pool = (data ?? []).filter((question) => !usedQuestionIds.has(question.id));
@@ -302,7 +399,10 @@ async function fetchNextQuestion(sectionId, difficulty, candidateId) {
 }
 
 async function fetchNextAvailableQuestion(sectionId, candidateId, difficultyOrder) {
-  for (const difficulty of difficultyOrder) {
+  const allDifficulties = ['easy', 'medium', 'hard'];
+  const orderToTry = [...new Set([...difficultyOrder, ...allDifficulties])];
+
+  for (const difficulty of orderToTry) {
     const question = await fetchNextQuestion(sectionId, difficulty, candidateId);
     if (question) {
       return question;
@@ -310,6 +410,23 @@ async function fetchNextAvailableQuestion(sectionId, candidateId, difficultyOrde
   }
 
   return null;
+}
+
+async function fetchHighestScoreForSection(sectionId) {
+  if (!supabase) return null;
+  try {
+    const { data, error } = await supabase
+      .from('marks')
+      .select('score')
+      .eq('section_id', sectionId)
+      .not('score', 'is', null)
+      .order('score', { ascending: false })
+      .limit(1);
+    if (error || !data || !data.length) return null;
+    return data[0].score;
+  } catch {
+    return null;
+  }
 }
 
 async function loadActiveQuestion() {
@@ -326,12 +443,31 @@ async function loadActiveQuestion() {
     return;
   }
 
+  // Fetch the highest score any candidate has received in this section so far
+  state.sectionHighestScore = await fetchHighestScoreForSection(state.activeSection.id);
+
   const sectionType = state.activeSection.section_type;
+
+  if (sectionType === 'gpa') {
+    state.activeQuestion = null;
+    if (questionTextEl) {
+      questionTextEl.textContent = 'GPA ভিত্তিক সেকশন: প্রাপ্ত নম্বর সরাসরি প্রবেশ করান।';
+    }
+    setDirectEntryMode(true);
+    setEvaluationStatus(`Section: ${state.activeSection.section_name} (GPA)`);
+    return;
+  }
+
+  if (directEntryToggle) {
+    directEntryToggle.checked = false;
+  }
+  setDirectEntryMode(false);
+
   const difficultyOrder = state.activeDifficulty === 'easy'
-    ? ['easy']
+    ? ['easy', 'medium', 'hard']
     : state.activeDifficulty === 'medium'
-      ? ['medium']
-      : ['hard'];
+      ? ['medium', 'hard', 'easy']
+      : ['hard', 'medium', 'easy'];
 
   const question = await fetchNextAvailableQuestion(state.activeSection.id, candidateId, difficultyOrder);
 
@@ -340,14 +476,20 @@ async function loadActiveQuestion() {
   if (!question) {
     state.activeQuestion = null;
     if (questionTextEl) {
-      questionTextEl.textContent = 'No unused question found for this difficulty.';
+      questionTextEl.textContent = 'No unused question found for this section.';
     }
     return;
   }
 
+  const prevDifficulty = state.activeDifficulty;
   state.activeQuestion = question;
   state.activeDifficulty = question.difficulty;
-  
+
+  clearRatingHighlights();
+  animateQuestionCard();
+  showDifficultyBanner(question.difficulty);
+  updateSectionInfoBar();
+
   if (questionTextEl) {
     questionTextEl.textContent = question.question_text;
     console.log('Question text set to:', questionTextEl.textContent);
@@ -389,6 +531,7 @@ function moveToNextSectionOrFinish() {
   state.activeSection = selectedSections[state.activeSectionIndex];
   state.activeDifficulty = 'easy';
   state.lastRating = null;
+  updateSectionInfoBar();
   loadActiveQuestion();
 }
 
@@ -456,11 +599,18 @@ function renderExaminerList() {
 }
 
 function renderCandidateSummary() {
-  if (!candidateSummaryEl || !state.candidate) {
+  if (!state.candidate) {
     return;
   }
 
-  candidateSummaryEl.textContent = `${state.candidate.roll_no} | ${state.candidate.name} | ${state.candidate.post_applied}`;
+  const summaryText = `${state.candidate.roll_no} | ${state.candidate.name} | ${state.candidate.post_applied}`;
+
+  if (candidateSummaryEl) {
+    candidateSummaryEl.textContent = summaryText;
+  }
+  if (evaluationSummaryEl) {
+    evaluationSummaryEl.textContent = summaryText;
+  }
 }
 
 function renderSectionChecklist() {
@@ -553,7 +703,7 @@ async function loadSectionsForPost(postApplied) {
 
   const { data, error } = await supabase
     .from('sections')
-    .select('id, section_name, section_type, section_order, post_type')
+    .select('id, section_name, max_marks, section_type, section_order, post_type')
     .eq('post_type', normalizedPost)
     .order('section_order', { ascending: true });
 
@@ -567,7 +717,7 @@ async function loadSectionsForPost(postApplied) {
   if (!sections.length) {
     const fallback = await supabase
       .from('sections')
-      .select('id, section_name, section_type, section_order, post_type')
+      .select('id, section_name, max_marks, section_type, section_order, post_type')
       .order('section_order', { ascending: true });
 
     if (!fallback.error) {
@@ -578,6 +728,11 @@ async function loadSectionsForPost(postApplied) {
   }
 
   state.sections = sections;
+
+  if (!state.selectedSectionIds || !state.selectedSectionIds.length) {
+    state.selectedSectionIds = sections.map((s) => s.id);
+    saveSelectedSections(state.selectedSectionIds);
+  }
 
   if (!state.sections.length && sectionListEl) {
     sectionListEl.innerHTML = `<div class="value-box">No sections found for post: ${normalizedPost || 'unknown'}</div>`;
@@ -601,6 +756,7 @@ async function startEvaluationFlow() {
   state.sectionResults = [];
   saveSelectedSections(state.selectedSectionIds);
   showEvaluationScreen();
+  updateSectionInfoBar();
   await loadActiveQuestion();
 }
 
@@ -656,6 +812,8 @@ async function handleRatingSelection(rating) {
     return;
   }
 
+  highlightSelectedRating(rating);
+
   await insertResponseLogEntry({
     candidateId,
     examinerId,
@@ -675,7 +833,7 @@ async function handleRatingSelection(rating) {
 
   if (currentDifficulty === 'hard') {
     updateScoreForCurrentOutcome(currentDifficulty, rating);
-    setEvaluationStatus(`Final rating recorded for ${currentDifficulty}.`);
+    setEvaluationStatus(`✓ [${rating.toUpperCase()}] recorded. Click ' lock section' to finish.`);
     return;
   }
 
@@ -684,16 +842,19 @@ async function handleRatingSelection(rating) {
     const nextQuestion = await fetchNextAvailableQuestion(state.activeSection.id, candidateId, [nextDifficulty]);
     if (nextQuestion) {
       state.activeQuestion = nextQuestion;
+      clearRatingHighlights();
+      animateQuestionCard();
+      showDifficultyBanner(nextDifficulty);
       if (questionTextEl) {
         questionTextEl.textContent = nextQuestion.question_text;
       }
-      setEvaluationStatus(`Moved to ${nextDifficulty}.`);
+      setEvaluationStatus(`✓ Saved (${rating}). Promoted to ${nextDifficulty} difficulty.`);
       return;
     }
   }
 
   updateScoreForCurrentOutcome(currentDifficulty, rating);
-  setEvaluationStatus('Rating recorded. Ready to lock section.');
+  setEvaluationStatus(`✓ Rating recorded (${rating}). Section score calculated.`);
 }
 
 async function handleLockSection() {
@@ -872,13 +1033,49 @@ function handleLogout() {
   loadExaminers();
 }
 
-function hydrateSession() {
+async function hydrateSession() {
   const storedExaminerId = readStoredValue(storageKeys.examinerId);
+  const storedExaminerName = readStoredValue(storageKeys.examinerName);
   const storedCandidateId = readStoredValue(storageKeys.candidateId);
+  const storedCandidateRollNo = readStoredValue(storageKeys.candidateRollNo);
   state.selectedSectionIds = getStoredSelectedSections();
 
   if (storedExaminerId) {
-    showScreen(storedCandidateId ? screenSections : screenCandidate);
+    if (statusEl && storedExaminerName) {
+      statusEl.textContent = `Logged in as ${storedExaminerName}`;
+    }
+
+    if (storedCandidateRollNo || storedCandidateId) {
+      try {
+        let candidate = null;
+        if (storedCandidateRollNo) {
+          candidate = await findCandidateByRollNo(storedCandidateRollNo);
+        }
+        if (!candidate && storedCandidateId && supabase) {
+          const { data } = await supabase
+            .from('candidates')
+            .select('id, roll_no, name, post_applied')
+            .eq('id', storedCandidateId)
+            .maybeSingle();
+          candidate = data;
+        }
+
+        if (candidate) {
+          state.candidate = candidate;
+          if (candidateNameEl) candidateNameEl.textContent = candidate.name;
+          if (candidatePostEl) candidatePostEl.textContent = candidate.post_applied;
+          setDisplay(candidateMatchCard, true);
+          await loadSectionsForPost(candidate.post_applied);
+          renderCandidateSummary();
+          showScreen(screenSections);
+          return;
+        }
+      } catch (error) {
+        console.error('Session rehydration failed:', error);
+      }
+    }
+
+    showScreen(screenCandidate);
   } else {
     showScreen(screenLogin);
   }
@@ -900,6 +1097,12 @@ async function bootstrap() {
   });
   nextCandidateButton?.addEventListener('click', handleNextCandidate);
   logoutButton?.addEventListener('click', handleLogout);
+  backToSectionsButton?.addEventListener('click', () => {
+    clearEvaluationState();
+    renderCandidateSummary();
+    renderSectionChecklist();
+    showScreen(screenSections);
+  });
 
   ratingGridEl?.addEventListener('click', (event) => {
     const target = event.target;
@@ -918,7 +1121,7 @@ async function bootstrap() {
     });
   });
 
-  hydrateSession();
+  await hydrateSession();
 
   if (state.selectedSectionIds.length && !candidateMatchCard?.classList.contains('hidden')) {
     saveSelectedSections(state.selectedSectionIds);

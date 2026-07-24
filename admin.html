@@ -8,7 +8,30 @@
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body class="admin-page">
-    <div class="app-shell admin-shell">
+
+    <!-- ===== LOGIN OVERLAY ===== -->
+    <div class="admin-login-overlay" id="admin-login-overlay">
+      <div class="admin-login-box">
+        <p class="eyebrow">Recruitment Exam Evaluation</p>
+        <h1>Admin প্যানেল</h1>
+        <p class="subtitle">প্রবেশের জন্য পাসওয়ার্ড দিন।</p>
+        <form id="admin-login-form" class="admin-login-form">
+          <input
+            type="password"
+            id="admin-password-input"
+            class="text-input"
+            placeholder="পাসওয়ার্ড লিখুন"
+            autocomplete="current-password"
+            required
+          />
+          <p class="admin-login-error hidden" id="admin-login-error">ভুল পাসওয়ার্ড। আবার চেষ্টা করুন।</p>
+          <button class="action-button primary" type="submit">লগইন করুন</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- ===== ADMIN SHELL (hidden until login) ===== -->
+    <div class="app-shell admin-shell hidden" id="admin-shell">
       <header class="app-header admin-header">
         <div>
           <p class="eyebrow">Recruitment Exam Evaluation</p>
@@ -19,11 +42,14 @@
           <button class="action-button primary" id="export-csv-button" type="button">CSV Export</button>
           <button class="action-button" id="delete-all-button" type="button">Delete All Candidates</button>
           <a class="action-button admin-link" href="./index.html">Evaluation App</a>
+          <button class="action-button" id="admin-logout-button" type="button">লগআউট</button>
           <div class="status-pill" id="admin-status">Loading data</div>
         </div>
       </header>
 
       <main class="admin-main">
+
+        <!-- Candidates Table -->
         <section class="panel">
           <div class="card admin-card">
             <div class="admin-table-wrap">
@@ -44,9 +70,42 @@
             </div>
           </div>
         </section>
+
+        <!-- Examiner Management -->
+        <section class="panel">
+          <div class="card admin-card examiner-mgmt-card">
+            <div class="examiner-mgmt-header">
+              <div>
+                <h2>পরীক্ষক ব্যবস্থাপনা</h2>
+                <p class="admin-muted">পরীক্ষকের নাম ও পদবী যোগ করুন অথবা মুছুন।</p>
+              </div>
+            </div>
+
+            <!-- Add Examiner Form -->
+            <form id="add-examiner-form" class="add-examiner-form">
+              <div class="examiner-form-row">
+                <div class="examiner-form-field">
+                  <label for="examiner-name-input">নাম</label>
+                  <input type="text" id="examiner-name-input" class="text-input" placeholder="পরীক্ষকের পূর্ণ নাম" required />
+                </div>
+                <div class="examiner-form-field">
+                  <label for="examiner-designation-input">পদবী</label>
+                  <input type="text" id="examiner-designation-input" class="text-input" placeholder="যেমন: উপজেলা নির্বাহী অফিসার" />
+                </div>
+                <button class="action-button primary" type="submit" id="add-examiner-button">যোগ করুন</button>
+              </div>
+              <p class="add-examiner-status hidden" id="add-examiner-status"></p>
+            </form>
+
+            <!-- Examiner List -->
+            <div id="examiner-management-list" class="examiner-management-list"></div>
+          </div>
+        </section>
+
       </main>
     </div>
 
+    <!-- Details Modal -->
     <div class="modal hidden" id="details-modal" aria-hidden="true">
       <div class="modal-backdrop" data-close-modal></div>
       <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="details-modal-title">
@@ -61,7 +120,38 @@
       </div>
     </div>
 
-    <script type="module" src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm"></script>
+    <!-- Delete Examiner Confirm Modal -->
+    <div class="modal hidden" id="delete-examiner-modal" aria-hidden="true">
+      <div class="modal-backdrop"></div>
+      <div class="delete-confirm-panel" role="alertdialog" aria-modal="true" aria-labelledby="delete-confirm-title">
+        <div class="delete-confirm-icon">⚠️</div>
+        <h2 id="delete-confirm-title">পরীক্ষক মুছবেন?</h2>
+        <p id="delete-examiner-message" class="delete-confirm-message"></p>
+        <p class="admin-muted delete-confirm-note">এই কাজটি পূর্বাবস্থায় ফেরানো যাবে না।</p>
+        <div class="delete-confirm-actions">
+          <button class="action-button" type="button" id="delete-examiner-cancel">বাতিল করুন</button>
+          <button class="action-button danger" type="button" id="delete-examiner-confirm">হ্যাঁ, মুছুন</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Final Warning Modal -->
+<div class="modal hidden" id="final-warning-modal" aria-hidden="true">
+  <div class="modal-backdrop" data-close-modal></div>
+  <div class="modal-panel final-warning-panel" role="alertdialog" aria-modal="true" aria-labelledby="final-warning-title">
+    <div class="modal-header">
+      <h2 id="final-warning-title" class="final-warning-title">FINAL WARNING</h2>
+    </div>
+    <div class="modal-content">
+      <p class="final-warning-message">This will permanently delete <strong>ALL</strong> candidates and their data. Click OK only if you are absolutely certain.</p>
+    </div>
+    <div class="modal-actions">
+      <button class="action-button" type="button" id="final-warning-cancel">Cancel</button>
+      <button class="action-button danger" type="button" id="final-warning-confirm">OK</button>
+    </div>
+  </div>
+</div>
+
     <script type="module" src="./admin.js"></script>
   </body>
 </html>
