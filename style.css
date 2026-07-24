@@ -466,6 +466,17 @@ h1 {
   text-overflow: ellipsis;
 }
 
+.examiner-list-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.examiner-button .examiner-desig {
+  font-size: 0.82rem;
+}
+
 .examiner-top .examiner-desig {
   white-space: nowrap;
   overflow: hidden;
