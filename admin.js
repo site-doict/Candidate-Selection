@@ -284,18 +284,23 @@ function renderExaminerManagementList() {
       </div>
       <div class="examiner-section-checklist">
         ${sortedSections
-          .map(
-            (section) => `
-          <label class="examiner-section-check-row">
+          .map((section) => {
+            const typeLabels = { practical: 'ব্যবহারিক', viva: 'মৌখিক', gpa: 'জিপিএ' };
+            const typeLabel = typeLabels[section.section_type] ?? section.section_type;
+            return `
+          <label class="examiner-section-check-row post-${escapeHtml(section.post_type)}">
             <input
               type="checkbox"
               data-examiner-id="${escapeHtml(String(examiner.id))}"
               data-section-id="${escapeHtml(String(section.id))}"
               ${assignedIds.has(normalizeId(section.id)) ? 'checked' : ''}
             />
-            <span>${escapeHtml(section.section_name)} (${escapeHtml(section.post_type)} • পূর্ণমান: ${escapeHtml(section.max_marks ?? '—')})</span>
-          </label>`,
-          )
+            <span class="post-tag post-tag-${escapeHtml(section.post_type)}">${escapeHtml(section.post_type)}</span>
+            <span class="type-tag type-tag-${escapeHtml(section.section_type)}">${escapeHtml(typeLabel)}</span>
+            <span class="section-check-name">${escapeHtml(section.section_name)}</span>
+            <span class="section-check-marks">পূর্ণমান: ${escapeHtml(section.max_marks ?? '—')}</span>
+          </label>`;
+          })
           .join('')}
       </div>
       <button
