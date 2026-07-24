@@ -647,7 +647,7 @@ function renderExaminerInfo(name, designation) {
   const nameEl = document.getElementById('examiner-name');
   const desigEl = document.getElementById('examiner-desig');
   if (nameEl) nameEl.textContent = name;
-  if (desigEl) desigEl.textContent = designation || '';
+  if (desigEl) desigEl.textContent = designation ? `(${designation})` : '';
   if (topBarEl) topBarEl.classList.remove('hidden');
 }
 
