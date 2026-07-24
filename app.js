@@ -58,6 +58,7 @@ const state = {
   activeQuestion: null,
   activeDifficulty: 'easy',
   lastRating: null,
+  questionAnswered: false,
  directEntry: false,
   sectionResults: [],
   sectionHighestScore: null,
@@ -123,9 +124,12 @@ function clearEvaluationState() {
   state.activeQuestion = null;
   state.activeDifficulty = 'easy';
   state.lastRating = null;
+  state.questionAnswered = false;
   state.sectionScoreAccum = 0;
   state.directEntry = false;
   state.sectionResults = [];
+
+  setRatingGridEnabled(true);
 
   if (directEntryToggle) {
     directEntryToggle.checked = false;
@@ -285,6 +289,19 @@ function clearRatingHighlights() {
   const buttons = ratingGridEl.querySelectorAll('.rating-button');
   buttons.forEach((btn) => {
     btn.classList.remove('active', 'pulse-anim');
+  });
+}
+
+// Disables the rating buttons once the current question has been rated, so
+// repeated clicks on the same question can't add its score multiple times.
+// Re-enabled whenever a fresh question is loaded.
+function setRatingGridEnabled(enabled) {
+  if (!ratingGridEl) return;
+  const buttons = ratingGridEl.querySelectorAll('.rating-button');
+  buttons.forEach((btn) => {
+    btn.disabled = !enabled;
+    btn.style.opacity = enabled ? '' : '0.5';
+    btn.style.pointerEvents = enabled ? '' : 'none';
   });
 }
 
@@ -527,6 +544,8 @@ async function loadActiveQuestion() {
   const prevDifficulty = state.activeDifficulty;
   state.activeQuestion = question;
   state.activeDifficulty = question.difficulty;
+  state.questionAnswered = false;
+  setRatingGridEnabled(true);
 
   clearRatingHighlights();
   animateQuestionCard();
@@ -592,6 +611,7 @@ function resetCandidateAndSectionState() {
   state.activeQuestion = null;
   state.activeDifficulty = 'easy';
   state.lastRating = null;
+  state.questionAnswered = false;
   state.sectionScoreAccum = 0;
   state.directEntry = false;
   state.sectionResults = [];
@@ -907,6 +927,12 @@ async function handleRatingSelection(rating) {
     return;
   }
 
+  // Guard against double-scoring: once the current question has been rated,
+  // ignore any further clicks on the rating buttons until a new question loads.
+  if (state.questionAnswered) {
+    return;
+  }
+
   const candidateId = getCandidateId();
   const examinerId = getExaminerId();
 
@@ -914,6 +940,9 @@ async function handleRatingSelection(rating) {
     alert('Examiner or candidate session missing.');
     return;
   }
+
+  state.questionAnswered = true;
+  setRatingGridEnabled(false);
 
   highlightSelectedRating(rating);
 
@@ -937,7 +966,7 @@ async function handleRatingSelection(rating) {
   recordStageScore(currentDifficulty, rating);
 
   if (currentDifficulty === 'hard') {
-    setEvaluationStatus('');
+    setEvaluationStatus('✓ Saved. এই সেকশনের সর্বোচ্চ ধাপ সম্পন্ন হয়েছে — এখন "এই সেকশন লক করুন" চাপুন।');
     return;
   }
 
@@ -946,6 +975,8 @@ async function handleRatingSelection(rating) {
     const nextQuestion = await fetchNextAvailableQuestion(state.activeSection.id, candidateId, [nextDifficulty]);
     if (nextQuestion) {
       state.activeQuestion = nextQuestion;
+      state.questionAnswered = false;
+      setRatingGridEnabled(true);
       clearRatingHighlights();
       animateQuestionCard();
       showDifficultyBanner(nextDifficulty);
@@ -957,7 +988,7 @@ async function handleRatingSelection(rating) {
     }
   }
 
-  setEvaluationStatus(`✓ Rating recorded (${rating}). Section score calculated.`);
+  setEvaluationStatus(`✓ Rating recorded (${rating}). এই সেকশনের জন্য আর কোনো প্রশ্ন নেই — এখন "এই সেকশন লক করুন" চাপুন।`);
 }
 
 async function handleLockSection() {
@@ -1138,6 +1169,7 @@ function handleLogout() {
   state.activeQuestion = null;
   state.activeDifficulty = 'easy';
   state.lastRating = null;
+  state.questionAnswered = false;
   state.sectionScoreAccum = 0;
   state.directEntry = false;
   state.sectionResults = [];

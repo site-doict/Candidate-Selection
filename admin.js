@@ -41,6 +41,7 @@ const state = {
   sections: [],
   finalMarks: [],
   marks: [],
+  candidateNotes: [],
   examiners: [],
   examinerSections: [],
   expandedCandidateIds: new Set(),
@@ -108,6 +109,21 @@ function getFinalMarksMap() {
     }
     const key = `${candidateId}::${sectionId}`;
     map.set(key, row);
+  });
+  return map;
+}
+
+function getCandidateNotesMap() {
+  const map = new Map();
+  state.candidateNotes.forEach((note) => {
+    const candidateId = normalizeId(getRowValue(note, 'candidate_id'));
+    if (!candidateId) {
+      return;
+    }
+    if (!map.has(candidateId)) {
+      map.set(candidateId, []);
+    }
+    map.get(candidateId).push(note);
   });
   return map;
 }
@@ -455,6 +471,9 @@ function renderCandidateTable() {
     return;
   }
 
+  const candidateNotesMap = getCandidateNotesMap();
+  const examinerMapForNotes = getExaminerMap();
+
   state.candidates.forEach((candidate) => {
     const summary = computeCandidateSummary(candidate);
     const rowId = `candidate-${candidate.id}`;
@@ -493,6 +512,31 @@ function renderCandidateTable() {
           .join('')
       : '<div class="admin-empty">No matching sections found.</div>';
 
+    const notes = candidateNotesMap.get(normalizeId(candidate.id)) ?? [];
+    const commentsMarkup = notes.length
+      ? notes
+          .map((note) => {
+            const examinerName = examinerMapForNotes.get(normalizeId(note.examiner_id)) ?? 'Unknown examiner';
+            const { name } = parseExaminerName(examinerName);
+            return `
+          <div class="candidate-comment-row" style="padding:8px 0;border-bottom:1px solid rgba(0,0,0,0.08);">
+            <strong style="color:#0f6dfd;">${escapeHtml(name)}</strong>
+            <p style="margin:4px 0 0;white-space:pre-wrap;">${escapeHtml(getRowValue(note, 'comment'))}</p>
+          </div>
+        `;
+          })
+          .join('')
+      : '';
+
+    const commentsSectionMarkup = notes.length
+      ? `
+          <div class="admin-comments-section" style="margin-top:16px;padding-top:12px;border-top:1px dashed rgba(0,0,0,0.15);">
+            <strong>সর্বশেষ মন্তব্য</strong>
+            <div class="admin-comments-list" style="margin-top:8px;">${commentsMarkup}</div>
+          </div>
+        `
+      : '';
+
     detailsRow.innerHTML = `
       <td colspan="7">
         <div class="admin-details-card">
@@ -504,6 +548,7 @@ function renderCandidateTable() {
             <button class="action-button admin-inline-button" type="button" data-open-marks="${escapeHtml(candidate.id)}">বিস্তারিত দেখুন</button>
           </div>
           <div class="admin-section-list">${sectionMarkup}</div>
+          ${commentsSectionMarkup}
         </div>
       </td>
     `;
@@ -692,11 +737,12 @@ async function loadAdminData() {
 
   setStatus('Loading data');
 
-  const [candidatesResult, sectionsResult, finalMarksResult, marksResult, examinersResult, examinerSectionsResult] = await Promise.all([
+  const [candidatesResult, sectionsResult, finalMarksResult, marksResult, candidateNotesResult, examinersResult, examinerSectionsResult] = await Promise.all([
     supabase.from('candidates').select('*').order('roll_no', { ascending: true }),
     supabase.from('sections').select('*'),
     supabase.from('final_marks').select('candidate_id, section_id, final_score, examiner_count'),
     supabase.from('marks').select('candidate_id, examiner_id, section_id, score, method, updated_at'),
+    supabase.from('candidate_notes').select('candidate_id, examiner_id, comment, updated_at'),
     supabase.from('examiners').select('id, name').order('name', { ascending: true }),
     supabase.from('examiner_sections').select('examiner_id, section_id'),
   ]);
@@ -706,6 +752,7 @@ async function loadAdminData() {
     sectionsResult.error,
     finalMarksResult.error,
     marksResult.error,
+    candidateNotesResult.error,
     examinersResult.error,
     examinerSectionsResult.error,
   ].filter(Boolean);
@@ -720,6 +767,7 @@ async function loadAdminData() {
   state.sections = sectionsResult.data ?? [];
   state.finalMarks = finalMarksResult.data ?? [];
   state.marks = marksResult.data ?? [];
+  state.candidateNotes = candidateNotesResult.data ?? [];
   state.examiners = examinersResult.data ?? [];
   state.examinerSections = examinerSectionsResult.data ?? [];
 
